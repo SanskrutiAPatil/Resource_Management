@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import *
 from .emails import *
+from django.urls import reverse
 # Create your views here.
 
 # class RegisterAPI(APIView):
@@ -46,72 +47,77 @@ from .emails import *
         
 class VerifyOTP(APIView):
 
-    def post(self, request):
-        try:
-            data=request.data
-            serializer=VerifyAccountSerializer(data=data)
-
-            if serializer.is_valid():
-                email=serializer.data['email']
-                otp=serializer.data['otp']
-                user=User.objects.filter(email=email)
-
-                if not user.exists():
-                    return Response({
-                    'status':400,
-                    'message':'something went wrong',
-                    'data':'invalid mail',
-
-                })
-                if user[0].otp!=otp:
-                    return Response({
-                    'status':400,
-                    'message':'something went wrong',
-                    'data':'wrong otp',
-
-                })
+    def post(self, request, email):
+      
+        data=request.data
+        serializer=VerifyOTPSerializer(data=data)
+       
+        if serializer.is_valid():
             
-                user=user.first()
-                user.is_verified=True
-                user.save()
+            otp=serializer.data['otp']
+            new_p = serializer.data['new_password']
+            # serializer.data['mail']=email
+            user=User.objects.filter(email=email)
+            
+            if not user.exists():
                 return Response({
-                'status':200,
-                'message':'Account verified',
-                'data':{},
+                'status':400,
+                'message':'something went wrong',
+                'data':'invalid mail',
 
-                })
+            })
+            if user[0].otp!=otp:
+                return Response({
+                'status':400,
+                'message':'something went wrong',
+                'data':'wrong otp',
+
+            })
+
+            user=user.first()
+            user.set_password(new_p)
+            print(new_p)
+            # print("Earlier pwd", user.password)
+            user.password=new_p
+            # print("New pwd", user.password)
+            user.is_verified=True
+            user.save()
             
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-        except Exception as e:
-            return Response({'key': 'value'}, status=status.HTTP_200_OK)
+            return Response({
+            'status':200,
+            'message':'Account verified',
+            'data':{},
+
+            })
+
+
         
-class ChangePassword(APIView):
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        # except Exception as e:
+        #     return Response({'key': 'value'}, status=status.HTTP_200_OK)
+        
+class VerifyEmail(APIView):
    
     def get_object(self, queryset=None):
         return self.request.user
 
     def put(self, request, *args, **kwargs):
         self.object = self.get_object()
-        serializer = ChangePasswordSerializer(data=request.data)
+        serializer = EmailVerificationSerializer(data=request.data)
         print("!23")
         if serializer.is_valid():
             print("8977")
-            user=User.objects.filter(email=serializer.validated_data['gmail'])
+            user=User.objects.filter(email=serializer.validated_data['mail'])
             if user:
-                serializer.save()
-                print("account exists")
-                send_otp_via_email(serializer.data['gmail'])
-
-
-                # self.object.set_password(serializer.data.get("new_password"))
-                # self.object.save()
+                send_otp_via_email(serializer.data['mail'])
+                
                 return Response({
                     'status':200,
                     'message':'email sent',
                     'data':serializer.data,
                 })
-            
+
             #user with that mail does not exist
             return Response({
                     'status':400,
@@ -127,10 +133,5 @@ class ChangePassword(APIView):
 
                 })
 
-
-           
-        # # self.object.set_password(serializer.data.get("new_password"))
-        # # self.object.save()
-        # return Response(status=status.HTTP_204_NO_CONTENT)
-
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)           
+# class ResetPassword(APIView):
+#     def post(self, )

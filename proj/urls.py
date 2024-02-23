@@ -21,8 +21,9 @@ from app1.views import *
 urlpatterns = [
     path('admin/', admin.site.urls),
     # path('register/',RegisterAPI.as_view()),
-    path('verify/',VerifyOTP.as_view()),
-    path('reset/',ChangePassword.as_view())
+    path('verifyotp/<email>',VerifyOTP.as_view()),
+    path('verifyemail/',VerifyEmail.as_view())
+    
 
 ]
 
