@@ -12,9 +12,9 @@ class VerifyOTPSerializer(serializers.Serializer):
     new_password = serializers.CharField(required = True)
 
 
-# class PasswordResetSerializer(serializers.Serializer):
-#     email=serializers.EmailField()
-#     password=serializers.CharField()
+class PasswordSerializer(serializers.Serializer):
+    email=serializers.EmailField()
+    password=serializers.CharField()
 
 # from django.contrib.auth.password_validation import validate_password
 

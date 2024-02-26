@@ -1,0 +1,2 @@
+djangorestframework==3.14.0
+drf-firebase-auth=1.0.0

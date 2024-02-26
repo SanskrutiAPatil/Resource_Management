@@ -6,7 +6,8 @@ from rest_framework import status
 from .models import *
 from .emails import *
 from django.urls import reverse
-# Create your views here.
+from django.contrib.auth import authenticate
+from django.contrib.auth import login, logout
 
 # class RegisterAPI(APIView):
 #     def post(self,request):
@@ -135,3 +136,95 @@ class VerifyEmail(APIView):
 
 # class ResetPassword(APIView):
 #     def post(self, )
+    
+class SignIn(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = PasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user=User.objects.get(email=serializer.validated_data['email'])
+            if user and authenticate(username=serializer.validated_data['email'], password=serializer.validated_data['password']):
+                login(request, user)
+                return Response({
+                    'status':200,
+                    'message':'User logged in',
+                    'data':serializer.data,
+                })
+
+            #user with that mail does not exist
+            return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':'Wrong password',
+
+                })
+            
+        return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':serializer.errors,
+
+                })
+    
+class SignOut(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        try:
+            usr = request.user
+            logout(request)
+            return Response({
+                'status':200,
+                'message':'User logged out',
+                'data':usr.email,
+            })
+        except:
+            return Response({
+                    'status':400,
+                    'message':'something went wrong',
+
+                })
+    
+class AdminMonitor(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+    
+    def patch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user = request.user
+        serializer = EmailVerificationSerializer(data=request.data)
+        try:
+            if serializer.is_valid():
+                if user.is_admin == True:
+                    usr=User.objects.get(email=serializer.validated_data['mail'])
+                    e = usr.email
+                    usr.delete()
+                    return Response({
+                        'status':200,
+                        'message':'User deleted',
+                        'user':e,
+                    })
+                return Response({
+                    'status':400,
+                    'message':'Permission denied',
+                })
+            return Response({
+                        'status':400,
+                        'message':'something went wrong',
+                        'data':serializer.errors,
+
+                    })
+        except:
+            return Response({
+                'status':400,
+                'message':'something went wrong',
+                'data':serializer.errors,
+            })

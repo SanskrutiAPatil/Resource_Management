@@ -9,12 +9,12 @@ class User(AbstractUser):
     is_verified=models.BooleanField(default=False)
     otp=models.CharField(max_length=6)
 
+    is_admin = models.BooleanField(default=False)
+
+
     USERNAME_FIELD='email'
     REQUIRED_FIELDS=[]
     objects=UserManager()
 
     def __str__(self):
         return self.email
-
-   
-   

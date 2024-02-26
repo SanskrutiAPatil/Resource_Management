@@ -22,8 +22,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # path('register/',RegisterAPI.as_view()),
     path('verifyotp/<email>',VerifyOTP.as_view()),
-    path('verifyemail/',VerifyEmail.as_view())
-    
-
+    path('verifyemail/',VerifyEmail.as_view()),
+    path('login/', SignIn.as_view()),
+    path('logout/', SignOut.as_view()),
+    path('adminmonitor/', AdminMonitor.as_view()),
 ]
 
