@@ -8,6 +8,8 @@ from .emails import *
 from django.urls import reverse
 from django.contrib.auth import authenticate
 from django.contrib.auth import login, logout
+from django.utils.crypto import get_random_string
+from passlib.hash import django_pbkdf2_sha256
 
 # class RegisterAPI(APIView):
 #     def post(self,request):
@@ -147,7 +149,7 @@ class SignIn(APIView):
         serializer = PasswordSerializer(data=request.data)
         if serializer.is_valid():
             user=User.objects.get(email=serializer.validated_data['email'])
-            if user and authenticate(username=serializer.validated_data['email'], password=serializer.validated_data['password']):
+            if user and authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
                 login(request, user)
                 return Response({
                     'status':200,
@@ -160,7 +162,6 @@ class SignIn(APIView):
                     'status':400,
                     'message':'something went wrong',
                     'data':'Wrong password',
-
                 })
             
         return Response({
@@ -228,3 +229,29 @@ class AdminMonitor(APIView):
                 'message':'something went wrong',
                 'data':serializer.errors,
             })
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user = request.user
+        serializer = AdminAddSerializer(data=request.data)
+        if serializer.is_valid():
+            if user.is_admin == True:
+                temp_pass = get_random_string(length=10, allowed_chars="abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+                usr=User.objects.create(email=serializer.validated_data['mail'], password=django_pbkdf2_sha256.hash(temp_pass), role=serializer.validated_data['role'], club_name=serializer.validated_data['club_name'])
+                e = usr.email
+                send_random_password(serializer.validated_data['mail'], temp_pass)
+                return Response({
+                    'status':200,
+                    'message':'User created',
+                    'user':e,
+                })
+            return Response({
+                'status':400,
+                'message':'Permission denied',
+            })
+        return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':serializer.errors,
+
+                })

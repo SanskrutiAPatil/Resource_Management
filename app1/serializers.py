@@ -21,16 +21,10 @@ class PasswordSerializer(serializers.Serializer):
 class EmailVerificationSerializer(serializers.Serializer):
    
     mail = serializers.EmailField(required=True)
-    # new_password = serializers.CharField(required=True)
+
+class AdminAddSerializer(serializers.Serializer):
     
-
-    # def validate_email(self, value):
-    #     return value
-    # def create(self, validated_data):
-    #     return User.objects.create(**validated_data)
-
-    # def update(self, instance, validated_data):
-    #     return User.objects.update(instance, validated_data)
-
-
+    mail = serializers.EmailField(required=True)
+    role = serializers.IntegerField(required=True)
+    club_name = serializers.CharField(required=False)
     

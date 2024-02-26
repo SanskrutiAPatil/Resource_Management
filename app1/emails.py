@@ -19,3 +19,12 @@ def send_otp_via_email(email):
     user_obj=User.objects.get(email=email)
     user_obj.otp=otp
     user_obj.save()
+
+def send_random_password(email, password):
+    subject = 'Your random password'
+
+    message = f'Your pass is {password}'
+
+    email_from = settings.EMAIL_HOST
+
+    send_mail(subject, message, email_from, [email])
