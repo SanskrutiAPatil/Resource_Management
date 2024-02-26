@@ -198,7 +198,7 @@ class AdminMonitor(APIView):
     def get_object(self, queryset=None):
         return self.request.user
     
-    def patch(self, request, *args, **kwargs):
+    def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
         user = request.user
         serializer = EmailVerificationSerializer(data=request.data)
