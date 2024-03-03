@@ -10,6 +10,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import login, logout
 from django.utils.crypto import get_random_string
 from passlib.hash import django_pbkdf2_sha256
+# from django.views.decorators.csrf import ensure_csrf_cookie
 
 # class RegisterAPI(APIView):
 #     def post(self,request):
@@ -143,9 +144,15 @@ class SignIn(APIView):
    
     def get_object(self, queryset=None):
         return self.request.user
-
+    
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+        if request.user.id != None:
+            return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':'An User already logged in',
+                })
         serializer = PasswordSerializer(data=request.data)
         if serializer.is_valid():
             user=User.objects.get(email=serializer.validated_data['email'])
@@ -193,6 +200,7 @@ class SignOut(APIView):
 
                 })
     
+# @ensure_csrf_cookie
 class AdminMonitor(APIView):
    
     def get_object(self, queryset=None):
@@ -200,35 +208,35 @@ class AdminMonitor(APIView):
     
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
+        print("data => ",request.data)
         user = request.user
         serializer = EmailVerificationSerializer(data=request.data)
-        try:
-            if serializer.is_valid():
-                if user.is_admin == True:
-                    usr=User.objects.get(email=serializer.validated_data['mail'])
-                    e = usr.email
-                    usr.delete()
+        print("here")
+        if serializer.is_valid():
+            if user.is_admin == True:
+                if not User.objects.filter(email=serializer.validated_data['mail']).exists():
                     return Response({
-                        'status':200,
-                        'message':'User deleted',
-                        'user':e,
-                    })
+                    'status':200,
+                    'message':'User not found',
+                })
+                usr=User.objects.get(email=serializer.validated_data['mail'])
+                e = usr.email
+                usr.delete()
                 return Response({
-                    'status':400,
-                    'message':'Permission denied',
+                    'status':200,
+                    'message':'User deleted',
+                    'user':e,
                 })
             return Response({
-                        'status':400,
-                        'message':'something went wrong',
-                        'data':serializer.errors,
-
-                    })
-        except:
-            return Response({
                 'status':400,
-                'message':'something went wrong',
-                'data':serializer.errors,
+                'message':'Permission denied',
             })
+        return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':serializer.errors,
+
+                })
     
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
