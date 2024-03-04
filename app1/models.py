@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser,User
 from .manager import UserManager
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
-# Create your models here.
+
 class User(AbstractUser):
     username=None
     email=models.EmailField(unique=True)
@@ -24,30 +24,40 @@ class User(AbstractUser):
         return self.email
 
 class Resource(models.Model):
-    CHOICE = [
+    CHOICES = [
         ('audi', 'Auditorium'),
-        ('sem', 'Seminar hall'),   
+        ('sem', 'Seminar hall'), 
     ]
-    resource=models.CharField(max_length=20,unique=True,choices=CHOICE)
-    resource_type = models.IntegerField()
+    resource_name = models.CharField(max_length=20, primary_key=True, choices=CHOICES)
+    resource_type = models.IntegerField(default=0)
+    max_permission = models.IntegerField(default=3, validators=[MaxValueValidator(5), MinValueValidator(3)])
+    current_permission = models.IntegerField(default=0)
 
     def __str__(self):
-        return self.resource
+        return self.resource_name
+
     
-class Session(models.Model):
-    # id = models.IntegerField
-    resource=models.ForeignKey(Resource,on_delete=models.CASCADE)
-    date = models.DateField(default = timezone.now, null = True)
-    start_time=models.DateTimeField(default=timezone.now,null=True)
-    end_time=models.DateTimeField(default=timezone.now,null=True)
+# class Session(models.Model):
+#     resource=models.ForeignKey(Resource,on_delete=models.CASCADE)
+#     date = models.DateField(default = timezone.now, null = True)
+#     start_time=models.DateTimeField(default=timezone.now,null=True)
+#     end_time=models.DateTimeField(default=timezone.now,null=True)
 
-    def __str__(self):
-        return f"{self.resource}: {self.start_time} to {self.end_time}"
+#     def __str__(self):
+#         return f"{self.resource}: {self.start_time} to {self.end_time}"
 
 class Booking(models.Model):
-    user=models.ForeignKey(User,on_delete=models.CASCADE)
-    resource=models.ForeignKey(Resource,on_delete=models.CASCADE)
-    session = models.OneToOneField(Session,on_delete=models.CASCADE)
+    booking_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name='bookings')
+    date = models.DateField(default=timezone.now, null=True)
+    start_time = models.DateTimeField(default=timezone.now, null=True)
+    end_time = models.DateTimeField(default=timezone.now, null=True)
 
     def __str__(self):
-        return self.user
+        return f"{self.user.email} for {self.resource.resource_name} with id={self.booking_id}"
+    
+    def save(self, *args, **kwargs):
+        # Set the date part of start_time to current date
+        self.date = self.start_time.date()
+        super().save(*args, **kwargs)

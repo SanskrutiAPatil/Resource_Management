@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import User
+from .models import *
+from django.utils import timezone
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,3 +29,12 @@ class AdminAddSerializer(serializers.Serializer):
     role = serializers.IntegerField(required=True)
     club_name = serializers.CharField(required=False)
     
+class BookingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Booking
+        fields = '__all__'
+    
+    date = serializers.DateField(default=timezone.now, required=False)
+    start_time=serializers.DateTimeField(default=timezone.now)
+    end_time=serializers.DateTimeField(default=timezone.now)

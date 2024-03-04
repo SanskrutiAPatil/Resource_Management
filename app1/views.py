@@ -10,6 +10,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import login, logout
 from django.utils.crypto import get_random_string
 from passlib.hash import django_pbkdf2_sha256
+from django.core.serializers import serialize
+from django.http import JsonResponse
 # from django.views.decorators.csrf import ensure_csrf_cookie
 
 # class RegisterAPI(APIView):
@@ -208,10 +210,8 @@ class AdminMonitor(APIView):
     
     def delete(self, request, *args, **kwargs):
         self.object = self.get_object()
-        print("data => ",request.data)
         user = request.user
         serializer = EmailVerificationSerializer(data=request.data)
-        print("here")
         if serializer.is_valid():
             if user.is_admin == True:
                 if not User.objects.filter(email=serializer.validated_data['mail']).exists():
@@ -263,3 +263,61 @@ class AdminMonitor(APIView):
                     'data':serializer.errors,
 
                 })
+    
+class ResourceDetail(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def get(self, request, resource, *args, **kwargs):
+        self.object = self.get_object()
+        if request.user.is_authenticated:
+            e = "yes"
+        else:
+            e = "no"
+        
+        bookings = Booking.objects.filter(resource=resource)
+        serialized_bookings = []
+        for booking in bookings:
+            serialized_booking = {
+                'start_time': booking.start_time,
+                'end_time': booking.end_time,
+            }
+            serialized_bookings.append(serialized_booking)
+
+        return JsonResponse({
+            'status': 200,
+            'message': 'Showing details',
+            'booking_allowed': e,
+            'bookings': serialized_bookings
+        })
+    
+    def post(self, request, resource, *args, **kwargs):
+        user = request.user
+        data = request.data
+        data['user'] = user.id
+        data['resource'] = resource
+        serializer = BookingSerializer(data=data)
+        if serializer.is_valid():
+            if user.is_authenticated:
+                
+                # Create the booking object
+                booking = serializer.save()
+                
+                # Return a success response
+                return Response({
+                    'status': status.HTTP_200_OK,
+                    'message': 'Session Booked',
+                    'booking_id': booking.booking_id
+                })
+            else:
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': 'Permission denied'
+                })
+        else:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Something went wrong',
+                'errors': serializer.errors
+            })
