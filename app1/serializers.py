@@ -27,7 +27,7 @@ class AdminAddSerializer(serializers.Serializer):
     
     mail = serializers.EmailField(required=True)
     role = serializers.IntegerField(required=True)
-    club_name = serializers.CharField(required=False)
+    club_name = serializers.CharField(required=False,default=None,allow_null=True)
     
 class BookingSerializer(serializers.ModelSerializer):
 
@@ -38,3 +38,7 @@ class BookingSerializer(serializers.ModelSerializer):
     date = serializers.DateField(default=timezone.now, required=False)
     start_time=serializers.DateTimeField(default=timezone.now)
     end_time=serializers.DateTimeField(default=timezone.now)
+
+class Getdate(serializers.Serializer):
+    date=serializers.DateField(default=timezone.now().date())
+    

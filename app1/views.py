@@ -12,6 +12,9 @@ from django.utils.crypto import get_random_string
 from passlib.hash import django_pbkdf2_sha256
 from django.core.serializers import serialize
 from django.http import JsonResponse
+from django.db.models import Q
+from datetime import timedelta
+
 # from django.views.decorators.csrf import ensure_csrf_cookie
 
 # class RegisterAPI(APIView):
@@ -269,41 +272,96 @@ class ResourceDetail(APIView):
     def get_object(self, queryset=None):
         return self.request.user
 
-    def get(self, request, resource, *args, **kwargs):
-        self.object = self.get_object()
-        if request.user.is_authenticated:
-            e = "yes"
-        else:
-            e = "no"
-        
-        bookings = Booking.objects.filter(resource=resource)
-        serialized_bookings = []
-        for booking in bookings:
-            serialized_booking = {
-                'start_time': booking.start_time,
-                'end_time': booking.end_time,
-            }
-            serialized_bookings.append(serialized_booking)
+    #Deatils of the booked session of a resource for 6 days after a particular date.
+    def put(self, request, resource, *args, **kwargs):
+        # self.object = self.get_object()
 
-        return JsonResponse({
-            'status': 200,
-            'message': 'Showing details',
-            'booking_allowed': e,
-            'bookings': serialized_bookings
-        })
+        serializer=Getdate(data=request.data)
+#returns booking for that particular resource
+        if request.user.is_authenticated:
+            if serializer.is_valid():
+                # start_date=serializer.validated_data['date']
+                # end_date=start_date + timedelta(days = 7)
+                # print(start_date)
+                # print(end_date)
+                # # curr_date=start_date
+
+                curr_date = serializer.validated_data['date']
+                
+                # bookings_list = []
+                serialized_bookings = []
+        
+                for i in range (0,6):
+                    bookings=Booking.objects.filter(
+                        resource=resource,
+                        date=curr_date                    
+                    )
+                    for booking in bookings:
+                        serialized_booking = {
+                            'start_time': booking.start_time,
+                            'end_time': booking.end_time,
+                        }
+                        serialized_bookings.append(serialized_booking)
+                    
+                    
+                    curr_date = curr_date + timedelta(days = 1)
+
+                
+                # for booking in bookings:
+                #     serialized_booking = {
+                #         'start_time': booking.start_time,
+                #         'end_time': booking.end_time,
+                #     }
+                #     serialized_bookings.append(serialized_booking)
+
+                return JsonResponse({
+                    'status': 200,
+                    'message': 'Showing details',
+                    # 'booking_allowed': e,
+                    'bookings': serialized_bookings
+                })
+            else:
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': 'Something went wrong',
+                    'errors': serializer.errors
+                })
+            
+        else:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Permission denied'
+            })
     
+        
+            
+    #Booking of the resource.
     def post(self, request, resource, *args, **kwargs):
         user = request.user
         data = request.data
         data['user'] = user.id
         data['resource'] = resource
         serializer = BookingSerializer(data=data)
+        
         if serializer.is_valid():
             if user.is_authenticated:
                 
-                # Create the booking object
+              
                 booking = serializer.save()
-                
+                curr_start_time=data['start_time']
+                curr_end_time=data['end_time']
+               
+                print(curr_start_time)
+                print(curr_end_time)
+                # print(curr_date)
+
+                # queryset=Booking.objects.filter(
+                #     resource=resource,
+                #     end_time__gt=timezone.now()
+                    
+                # )
+                # print(queryset)
+
                 # Return a success response
                 return Response({
                     'status': status.HTTP_200_OK,
