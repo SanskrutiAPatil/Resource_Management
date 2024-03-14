@@ -161,12 +161,14 @@ class SignIn(APIView):
         serializer = PasswordSerializer(data=request.data)
         if serializer.is_valid():
             user=User.objects.get(email=serializer.validated_data['email'])
+            print(user)
+            print(user.password)
             if user and authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
                 login(request, user)
                 return Response({
                     'status':200,
                     'message':'User logged in',
-                    'data':serializer.data,
+                    'data':serializer.data
                 })
 
             #user with that mail does not exist
@@ -277,7 +279,7 @@ class ResourceDetail(APIView):
         # self.object = self.get_object()
 
         serializer=Getdate(data=request.data)
-#returns booking for that particular resource
+        #returns booking of that particular resource for the next 7 days
         if request.user.is_authenticated:
             if serializer.is_valid():
                 # start_date=serializer.validated_data['date']
@@ -338,7 +340,7 @@ class ResourceDetail(APIView):
     #Booking of the resource.
     def post(self, request, resource, *args, **kwargs):
         user = request.user
-        data = request.data
+        data = request.data.copy()
         data['user'] = user.id
         data['resource'] = resource
         serializer = BookingSerializer(data=data)
@@ -350,19 +352,14 @@ class ResourceDetail(APIView):
                 booking = serializer.save()
                 curr_start_time=data['start_time']
                 curr_end_time=data['end_time']
+                resource_head=resource.resource_head
+                print(resource_head)
+
                
-                print(curr_start_time)
-                print(curr_end_time)
-                # print(curr_date)
+                
 
-                # queryset=Booking.objects.filter(
-                #     resource=resource,
-                #     end_time__gt=timezone.now()
-                    
-                # )
-                # print(queryset)
+                
 
-                # Return a success response
                 return Response({
                     'status': status.HTTP_200_OK,
                     'message': 'Session Booked',
@@ -376,6 +373,58 @@ class ResourceDetail(APIView):
         else:
             return Response({
                 'status': status.HTTP_400_BAD_REQUEST,
-                'message': 'Something went wrong',
+                 'message': 'Something went wrong',
                 'errors': serializer.errors
             })
+        
+class AcceptRequest(APIView):
+    def patch(self,request,booking_id,*args,**kwargs):
+        
+
+        if request.user.is_authenticated and request.user.numericRoleLevel>=2:
+            # user_instance=User.objects.get(pk=request.user.id)
+            
+            try:
+                booking_instance = Booking.objects.get(pk=booking_id)
+            except Booking.DoesNotExist:
+                return Response({"message": "Booking does not exist."}, status=404)
+           
+            # to upate partially we pass instance as a paramter
+            serializer=acceptrequestSerializer(booking_instance,data=request.data)
+            if serializer.is_valid():
+                accept_value = serializer.validated_data.get('accept')
+                if accept_value:
+                
+                    booking_instance.list.append(True)
+                    serializer.save()
+                    print("hello")
+                    cnt=0
+                    required=3
+                    # percent=0
+                    for item in booking_instance.list:
+                       if item==True:
+                           cnt+=1
+                    percent=int((cnt/required)*100)
+
+                    if cnt==required:
+                        return Response(
+                            {'message':"booking done"
+                            }
+                        )
+                    else :
+                        return Response(
+                            {'message':f"{percent}% done"
+                            }
+                        )
+                else :
+                    # booking_instance.list.append(False)
+                    booking_instance.delete()
+                    # serializer.save()
+
+
+               
+            return  Response(serializer.errors, status=400)
+        
+        else:
+            return Response({"message": "User is not authenticated or does not have the required role."}, status=403)
+

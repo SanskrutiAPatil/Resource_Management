@@ -28,3 +28,9 @@ def send_random_password(email, password):
     email_from = settings.EMAIL_HOST
 
     send_mail(subject, message, email_from, [email])
+
+def send_email_to_resourcehead(email):
+    subject='you have received a request '
+    message='Respond at the earliest'
+    email_from = settings.EMAIL_HOST
+    send_mail(subject, message, email_from, [email])

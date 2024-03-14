@@ -28,5 +28,6 @@ urlpatterns = [
     path('adminmonitor/', AdminMonitor.as_view()),
     path('resourcedetail/<resource>', ResourceDetail.as_view()),
     path('auth/',include('rest_framework.urls'),name = "rest_framework"),
+    path('grant/<int:booking_id>',AcceptRequest.as_view())
 ]
 
