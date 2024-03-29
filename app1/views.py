@@ -6,7 +6,17 @@ from rest_framework import status
 from .models import *
 from .emails import *
 from django.urls import reverse
-# Create your views here.
+from django.contrib.auth import authenticate
+from django.contrib.auth import login, logout
+from django.utils.crypto import get_random_string
+from passlib.hash import django_pbkdf2_sha256
+from django.core.serializers import serialize
+from django.http import JsonResponse
+from django.db.models import Q
+from datetime import timedelta
+import json
+
+# from django.views.decorators.csrf import ensure_csrf_cookie
 
 # class RegisterAPI(APIView):
 #     def post(self,request):
@@ -135,3 +145,330 @@ class VerifyEmail(APIView):
 
 # class ResetPassword(APIView):
 #     def post(self, )
+    
+class SignIn(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if request.user.id != None:
+            return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':'An User already logged in',
+                })
+        serializer = PasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user=User.objects.get(email=serializer.validated_data['email'])
+            print(user)
+            print(user.password)
+            if user and authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
+                login(request, user)
+                return Response({
+                    'status':200,
+                    'message':'User logged in',
+                    'data':serializer.data
+                })
+
+            #user with that mail does not exist
+            return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':'Wrong password',
+                })
+            
+        return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':serializer.errors,
+
+                })
+    
+class SignOut(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        try:
+            usr = request.user
+            logout(request)
+            return Response({
+                'status':200,
+                'message':'User logged out',
+                'data':usr.email,
+            })
+        except:
+            return Response({
+                    'status':400,
+                    'message':'something went wrong',
+
+                })
+    
+# @ensure_csrf_cookie
+class AdminMonitor(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+    
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user = request.user
+        serializer = EmailVerificationSerializer(data=request.data)
+        if serializer.is_valid():
+            if user.is_admin == True:
+                if not User.objects.filter(email=serializer.validated_data['mail']).exists():
+                    return Response({
+                    'status':200,
+                    'message':'User not found',
+                })
+                usr=User.objects.get(email=serializer.validated_data['mail'])
+                e = usr.email
+                usr.delete()
+                return Response({
+                    'status':200,
+                    'message':'User deleted',
+                    'user':e,
+                })
+            return Response({
+                'status':400,
+                'message':'Permission denied',
+            })
+        return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':serializer.errors,
+
+                })
+    
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user = request.user
+        serializer = AdminAddSerializer(data=request.data)
+        if serializer.is_valid():
+            if user.is_admin == True:
+                temp_pass = get_random_string(length=10, allowed_chars="abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+                usr=User.objects.create(email=serializer.validated_data['mail'], password=django_pbkdf2_sha256.hash(temp_pass), role=serializer.validated_data['role'], club_name=serializer.validated_data['club_name'])
+                e = usr.email
+                send_random_password(serializer.validated_data['mail'], temp_pass)
+                return Response({
+                    'status':200,
+                    'message':'User created',
+                    'user':e,
+                })
+            return Response({
+                'status':400,
+                'message':'Permission denied',
+            })
+        return Response({
+                    'status':400,
+                    'message':'something went wrong',
+                    'data':serializer.errors,
+
+                })
+    
+class ResourceDetail(APIView):
+   
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    #Deatils of the booked session of a resource for 6 days after a particular date.
+    def put(self, request, resource, *args, **kwargs):
+        # self.object = self.get_object()
+
+        serializer=Getdate(data=request.data)
+        #returns booking of that particular resource for the next 7 days
+        if request.user.is_authenticated:
+            if serializer.is_valid():
+                # start_date=serializer.validated_data['date']
+                # end_date=start_date + timedelta(days = 7)
+                # print(start_date)
+                # print(end_date)
+                # # curr_date=start_date
+
+                curr_date = serializer.validated_data['date']
+                
+                # bookings_list = []
+                serialized_bookings = []
+        
+                for i in range (0,6):
+                    bookings=Booking.objects.filter(
+                        resource=resource,
+                        date=curr_date                    
+                    )
+                    for booking in bookings:
+                        serialized_booking = {
+                            'start_time': booking.start_time,
+                            'end_time': booking.end_time,
+                        }
+                        serialized_bookings.append(serialized_booking)
+                    
+                    
+                    curr_date = curr_date + timedelta(days = 1)
+
+                
+                # for booking in bookings:
+                #     serialized_booking = {
+                #         'start_time': booking.start_time,
+                #         'end_time': booking.end_time,
+                #     }
+                #     serialized_bookings.append(serialized_booking)
+
+                return JsonResponse({
+                    'status': 200,
+                    'message': 'Showing details',
+                    # 'booking_allowed': e,
+                    'bookings': serialized_bookings
+                })
+            else:
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': 'Something went wrong',
+                    'errors': serializer.errors
+                })
+            
+        else:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Permission denied'
+            })
+    
+        
+            
+    #Booking of the resource.
+    def post(self, request, resource, *args, **kwargs):
+        user = request.user
+        data = request.data.copy()
+        data['user'] = user.id
+        data['resource'] = resource
+
+        resource = Resource.objects.get(pk=resource)
+        resource_instance = resource.userperms
+        data['userperms'] = resource_instance
+
+        serializer = BookingSerializer(data=data)
+        
+        if serializer.is_valid():
+            if user.is_authenticated:
+                booking = serializer.save()
+                # book = Booking.objects.get(booking_id = booking.booking_id)
+                # print(book)
+                # book.curr_index += 1;
+                
+                curr_start_time=data['start_time']
+                curr_end_time=data['end_time']
+                resource_head=resource.resource_head
+                print(resource_head)
+                             
+
+                return Response({
+                    'status': status.HTTP_200_OK,
+                    'message': 'Permission Created',
+                    'booking_id': booking.booking_id
+                })
+            else:
+                return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': 'Permission denied'
+                })
+        else:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                 'message': 'Something went wrong',
+                'errors': serializer.errors
+            })
+        
+class AcceptRequest(APIView):
+    def get(self,request,booking_id,*args,**kwargs):
+
+        booking_instance = Booking.objects.get(pk=booking_id)
+        heirarchy_list=booking_instance.resource.userperms
+        # print(heirarchy_list[curr_ind])
+        
+        if request.user.is_authenticated and booking_instance.all_true==False and request.user.email==heirarchy_list[booking_instance.curr_index]:
+            # user_instance=User.objects.get(pk=request.user.id)
+            
+            try:
+                booking_instance = Booking.objects.get(pk=booking_id)
+                booking_instance.curr_index +=1
+
+                if(booking_instance.curr_index==booking_instance.max_index):
+                    booking_instance.all_true=True
+                    
+                booking_instance.save()
+
+                return Response({"message": "Accepted by current user"}, status=200)
+
+            except Booking.DoesNotExist:
+                return Response({"message": "Booking does not exist."}, status=404)
+           
+            # # to upate partially we pass instance as a paramter
+            # serializer=acceptrequestSerializer(booking_instance,data=request.data)
+            # if serializer.is_valid():
+            #     accept_value = serializer.validated_data.get('accept')
+            #     if accept_value:
+            #         curr_ind+=1
+            #         booking_instance.list.append(True)
+            #         serializer.save()
+            #         print("hello")
+            #         # curr_ind+=1
+            #         # percent=0
+                    
+            #         for item in booking_instance.list:
+            #            if item==True:
+            #                cnt+=1
+            #         percent=int((cnt/required)*100)
+
+            #         if cnt==required:
+            #             return Response(
+            #                 {'message':"booking done"
+            #                 }
+            #             )
+            #         else :
+            #             return Response(
+            #                 {'message':f"{percent}% done"
+            #                 }
+            #             )
+            #     else :
+            #         # booking_instance.list.append(False)
+            #         booking_instance.delete()
+            #         # serializer.save()
+               
+            # return  Response(serializer.errors, status=400)
+        
+        else:
+            return Response({"message": "User is not authenticated or does not have the required role."}, status=403)
+        
+        
+        
+class ViewRequests(APIView):
+    def get(self,request, *args,**kwargs):
+        print(request.user.numericRoleLevel)
+        if request.user.is_authenticated and request.user.numericRoleLevel>=2:
+            all_bookings = Booking.objects.all()
+            bookings_with_userperms = [booking for booking in all_bookings if request.user.email==booking.resource.userperms[booking.curr_index]]
+            serialized_bookings = []
+        
+            for booking in bookings_with_userperms:
+                serialized_booking = {
+                    'start_time': booking.start_time,
+                    'end_time': booking.end_time,
+                    'id': booking.booking_id,
+                }
+                serialized_bookings.append(serialized_booking)
+
+            return JsonResponse({
+                'status': 200,
+                'message': 'Showing details',
+                # 'booking_allowed': e,
+                'bookings': serialized_bookings
+            })
+        
+        else:
+            return Response({
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': 'Permission denied'
+                })
