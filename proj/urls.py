@@ -29,6 +29,9 @@ urlpatterns = [
     path('resourcedetail/<resource>', ResourceDetail.as_view()),
     path('auth/',include('rest_framework.urls'),name = "rest_framework"),
     path('grant/<int:booking_id>',AcceptRequest.as_view()),
+    path('deny/<int:booking_id>',DenyRequest.as_view()),
     path('viewrequests/',ViewRequests.as_view()),
+    path('resendotp/<email>',resendOTP.as_view()),
+
 ]
 

@@ -16,6 +16,10 @@ from django.db.models import Q
 from datetime import timedelta
 import json
 
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 # from django.views.decorators.csrf import ensure_csrf_cookie
 
 # class RegisterAPI(APIView):
@@ -56,7 +60,7 @@ import json
 #             return Response({'key': 'value'}, status=status.HTTP_200_OK)
         
 class VerifyOTP(APIView):
-
+#verifying otp for pass reset
     def post(self, request, email):
       
         data=request.data
@@ -67,16 +71,19 @@ class VerifyOTP(APIView):
             otp=serializer.data['otp']
             new_p = serializer.data['new_password']
             # serializer.data['mail']=email
-            user=User.objects.filter(email=email)
+            user=User.objects.get(email=email)
             
-            if not user.exists():
+            if not user:
                 return Response({
                 'status':400,
                 'message':'something went wrong',
                 'data':'invalid mail',
 
             })
-            if user[0].otp!=otp:
+
+
+
+            if user.otp!=otp:
                 return Response({
                 'status':400,
                 'message':'something went wrong',
@@ -84,12 +91,19 @@ class VerifyOTP(APIView):
 
             })
 
-            user=user.first()
+            if(user.expires_at < timezone.now()):
+                return Response({
+                'message':'OTP Validity expired',
+                'data':'Resend OTP',
+
+            })
+
+
+
+
+            # user=user.first()
             user.set_password(new_p)
-            print(new_p)
-            # print("Earlier pwd", user.password)
             user.password=new_p
-            # print("New pwd", user.password)
             user.is_verified=True
             user.save()
             
@@ -120,7 +134,10 @@ class VerifyEmail(APIView):
             print("8977")
             user=User.objects.filter(email=serializer.validated_data['mail'])
             if user:
-                send_otp_via_email(serializer.data['mail'])
+                print("ll ")
+                print(serializer.validated_data['mail'])
+                send_otp_via_email(serializer.validated_data['mail'])
+
                 
                 return Response({
                     'status':200,
@@ -143,8 +160,17 @@ class VerifyEmail(APIView):
 
                 })
 
-# class ResetPassword(APIView):
-#     def post(self, )
+
+class resendOTP(APIView):
+    def get(self, request,email, *args, **kwargs):
+        send_otp_via_email(email)
+        return Response({
+                    'status':200,
+                    'message':'otp sent',
+                    # 'data':serializer.data,
+                })
+
+
     
 class SignIn(APIView):
    
@@ -283,15 +309,12 @@ class ResourceDetail(APIView):
         #returns booking of that particular resource for the next 7 days
         if request.user.is_authenticated:
             if serializer.is_valid():
-                # start_date=serializer.validated_data['date']
-                # end_date=start_date + timedelta(days = 7)
-                # print(start_date)
-                # print(end_date)
-                # # curr_date=start_date
+               
 
                 curr_date = serializer.validated_data['date']
                 
                 # bookings_list = []
+                # list of dictionary
                 serialized_bookings = []
         
                 for i in range (0,6):
@@ -300,6 +323,7 @@ class ResourceDetail(APIView):
                         date=curr_date                    
                     )
                     for booking in bookings:
+                        # dictionary 
                         serialized_booking = {
                             'start_time': booking.start_time,
                             'end_time': booking.end_time,
@@ -310,13 +334,7 @@ class ResourceDetail(APIView):
                     curr_date = curr_date + timedelta(days = 1)
 
                 
-                # for booking in bookings:
-                #     serialized_booking = {
-                #         'start_time': booking.start_time,
-                #         'end_time': booking.end_time,
-                #     }
-                #     serialized_bookings.append(serialized_booking)
-
+           
                 return JsonResponse({
                     'status': 200,
                     'message': 'Showing details',
@@ -353,15 +371,12 @@ class ResourceDetail(APIView):
         
         if serializer.is_valid():
             if user.is_authenticated:
-                booking = serializer.save()
-                # book = Booking.objects.get(booking_id = booking.booking_id)
-                # print(book)
-                # book.curr_index += 1;
+                booking = serializer.save()  
                 
                 curr_start_time=data['start_time']
                 curr_end_time=data['end_time']
                 resource_head=resource.resource_head
-                print(resource_head)
+                print(resource_head) 
                              
 
                 return Response({
@@ -393,10 +408,16 @@ class AcceptRequest(APIView):
             
             try:
                 booking_instance = Booking.objects.get(pk=booking_id)
+                
+
                 booking_instance.curr_index +=1
 
                 if(booking_instance.curr_index==booking_instance.max_index):
+                    date=booking_instance.date
+                    email=booking_instance.user.email
+                    resource=booking_instance.resource.resource_name
                     booking_instance.all_true=True
+                    RequestAcceptedMail(email,resource,date)
                     
                 booking_instance.save()
 
@@ -441,7 +462,24 @@ class AcceptRequest(APIView):
         
         else:
             return Response({"message": "User is not authenticated or does not have the required role."}, status=403)
-        
+
+class DenyRequest(APIView):
+
+    def get(self,request,booking_id, *args,**kwargs):
+        try:
+            booking_instance = Booking.objects.get(pk=booking_id)
+            heirarchy_list=booking_instance.resource.userperms
+
+            if request.user.is_authenticated and request.user.email==heirarchy_list[booking_instance.curr_index]:
+                date=booking_instance.date
+                email=booking_instance.user.email
+                resource=booking_instance.resource.resource_name
+                RequestDeniededMail(email,resource,date)
+                booking_instance.delete()
+        except:
+            return Response({"message": "User is not authenticated or does not have the required role."}, status=403)
+
+
         
         
 class ViewRequests(APIView):
@@ -472,3 +510,33 @@ class ViewRequests(APIView):
                     'status': status.HTTP_400_BAD_REQUEST,
                     'message': 'Permission denied'
                 })
+        
+class PendingRequests(APIView):
+    def get(self,request, *args,**kwargs):
+        if request.user.is_autheticated and request.user.numericRoleLevel>=2:
+
+            email=request.user.email
+            bookings=Booking.objects.all()
+            
+            requests=[]
+            for booking in bookings:
+                if email in booking.resource.userperms:
+                    index=requests.index(email)
+                    if booking.curr_ind<=index:
+                        requests.append(booking)
+            
+            
+            return Response({
+                'message':'Pending Requests',
+                'data':list
+
+            })
+        else:
+            return Response({
+                'message':'permission Denied',
+            })
+
+
+
+
+

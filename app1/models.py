@@ -1,20 +1,23 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser,User
 from .manager import UserManager
+import random
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
+
+from .emails import send_otp_via_email
 
 class User(AbstractUser):
     username=None
     email=models.EmailField(unique=True)
     is_verified=models.BooleanField(default=False)
     otp=models.CharField(max_length=6, null=True)
-
+    expires_at = models.DateTimeField(default=timezone.now())
     is_admin = models.BooleanField(default=False)
     numericRoleLevel = models.IntegerField(default=0, validators=[MaxValueValidator(5),MinValueValidator(0)])
     role = models.CharField(max_length=50, null=True)
     club_name = models.CharField(max_length=50, null=True)
-    
+ 
 
     USERNAME_FIELD='email'
     REQUIRED_FIELDS=[]
