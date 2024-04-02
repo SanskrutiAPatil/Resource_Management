@@ -25,8 +25,8 @@ class User(AbstractUser):
     
     
 
-    # def __str__(self):
-    #     return self.email
+    def __str__(self):
+        return self.email
     # def save(self, *args, **kwargs):
     #     self.
     
@@ -61,6 +61,8 @@ class Resource(models.Model):
 
 class Booking(models.Model):
     booking_id = models.AutoField(primary_key=True)
+    title=models.TextField(null=True)
+    description=models.TextField(null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     resource = models.ForeignKey(Resource, on_delete=models.CASCADE, related_name='bookings')
     date = models.DateField(default=timezone.now, null=True)
