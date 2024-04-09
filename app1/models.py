@@ -16,7 +16,10 @@ class User(AbstractUser):
     is_admin = models.BooleanField(default=False)
     numericRoleLevel = models.IntegerField(default=0, validators=[MaxValueValidator(5),MinValueValidator(0)])
     role = models.CharField(max_length=50, null=True)
-    club_name = models.CharField(max_length=50, null=True)
+    organization = models.CharField(max_length=50, null=True)
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    
  
 
     USERNAME_FIELD='email'
@@ -33,7 +36,7 @@ class User(AbstractUser):
 
 class Resource(models.Model):
     CHOICES = [
-        ('audi', 'Auditorium'),
+        ('Auditorium', 'Auditorium'),
         ('sem', 'Seminar hall'), 
         ('labs','labs'),
         ('classroom','classroom')
