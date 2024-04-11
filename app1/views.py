@@ -6,6 +6,7 @@ from rest_framework import status
 from .models import *
 from .emails import *
 from django.urls import reverse
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
 from django.contrib.auth import login, logout
 from django.utils.crypto import get_random_string
@@ -75,7 +76,7 @@ class VerifyOTP(APIView):
             
             if not user:
                 return Response({
-                'status':400,
+                'status':status.HTTP_400_BAD_REQUEST,
                 'message':'something went wrong',
                 'data':'invalid mail',
 
@@ -85,7 +86,7 @@ class VerifyOTP(APIView):
 
             if user.otp!=otp:
                 return Response({
-                'status':400,
+                'status':status.HTTP_400_BAD_REQUEST,
                 'message':'something went wrong',
                 'data':'wrong otp',
 
@@ -147,14 +148,14 @@ class VerifyEmail(APIView):
 
             #user with that mail does not exist
             return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
                     'data':'Account with this mail does not exist',
 
                 })
             
         return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
                     'data':serializer.errors,
 
@@ -179,34 +180,44 @@ class SignIn(APIView):
     
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
+
         if request.user.id != None:
             return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
                     'data':'An User already logged in',
                 })
+      
+    
         serializer = PasswordSerializer(data=request.data)
         if serializer.is_valid():
-            user=User.objects.get(email=serializer.validated_data['email'])
-            print(user)
-            print(user.password)
-            if user and authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
-                login(request, user)
-                return Response({
-                    'status':200,
-                    'message':'User logged in',
-                    'data':serializer.data
-                })
-
-            #user with that mail does not exist
-            return Response({
-                    'status':400,
-                    'message':'something went wrong',
-                    'data':'Wrong password',
-                })
-            
+            try:
+                    user=User.objects.get(email=serializer.validated_data['email'])
+                
+                    print("k")
+                    if authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
+                        login(request, user)
+                        return Response({
+                            'status':200,
+                            'message':'User logged in',
+                            'data':serializer.data
+                        })
+                    else:
+                        return Response({
+                            'status':status.HTTP_400_BAD_REQUEST,
+                            'message':'Incorrect Mail ID',
+                            'data':'Wrong password',
+                        })
+            except  ObjectDoesNotExist:
+                        
+                        return Response({
+                            'status':status.HTTP_400_BAD_REQUEST,
+                            'message':'User with this mail does not exist',
+                        
+                        })
+        
         return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
                     'data':serializer.errors,
 
@@ -229,7 +240,7 @@ class SignOut(APIView):
             })
         except:
             return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
 
                 })
@@ -260,11 +271,11 @@ class AdminMonitor(APIView):
                     'user':e,
                 })
             return Response({
-                'status':400,
+                'status':status.HTTP_400_BAD_REQUEST,
                 'message':'Permission denied',
             })
         return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
                     'data':serializer.errors,
 
@@ -277,20 +288,20 @@ class AdminMonitor(APIView):
         if serializer.is_valid():
             if user.is_admin == True:
                 temp_pass = get_random_string(length=10, allowed_chars="abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
-                usr=User.objects.create(email=serializer.validated_data['mail'], password=django_pbkdf2_sha256.hash(temp_pass), role=serializer.validated_data['role'], club_name=serializer.validated_data['club_name'])
+                usr=User.objects.create(email=serializer.validated_data['mail'], password=django_pbkdf2_sha256.hash(temp_pass), role=serializer.validated_data['role'])
                 e = usr.email
                 send_random_password(serializer.validated_data['mail'], temp_pass)
                 return Response({
                     'status':200,
-                    'message':'User created',
+                    'message':'User created. Mail Sent',
                     'user':e,
                 })
             return Response({
-                'status':400,
+                'status':status.HTTP_400_BAD_REQUEST,
                 'message':'Permission denied',
             })
         return Response({
-                    'status':400,
+                    'status':status.HTTP_400_BAD_REQUEST,
                     'message':'something went wrong',
                     'data':serializer.errors,
 
@@ -328,6 +339,7 @@ class ResourceDetail(APIView):
                         serialized_booking = {
                             'start_time': booking.start_time,
                             'end_time': booking.end_time,
+                            'booked_by': booking.user.email,
                         }
                         serialized_bookings.append(serialized_booking)
                     
@@ -368,7 +380,7 @@ class ResourceDetail(APIView):
         resource_instance = resource.userperms
         data['userperms'] = resource_instance
 
-        print("hiii")
+        # print("hiii")
         print(data['start_time'])
         print(data['end_time'])
 
@@ -376,6 +388,7 @@ class ResourceDetail(APIView):
         
         if serializer.is_valid():
             if user.is_authenticated:
+                
                 booking = serializer.save()  
                 
                 curr_start_time=data['start_time']
@@ -563,7 +576,7 @@ class PendingRequests(APIView):
             })
         else:
             return Response({
-                'message':'permission Denied',
+                'message':'Permission Denied',
             })
 
 
@@ -645,13 +658,12 @@ class UserInfo(APIView):
             return JsonResponse({
                 'status': 200,
                 'message': 'Showing details',
-                ' user Details': user_details
+                'userDetails': user_details
             })
         else:
             return JsonResponse({
-                'status': 200,
-                'message': 'You need to sign in',
-                  
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': 'Login Required'
             })
         
         

@@ -28,10 +28,10 @@ class AdminAddSerializer(serializers.Serializer):
     
     mail = serializers.EmailField(required=True)
     role = serializers.IntegerField(required=True)
-    club_name = serializers.CharField(required=False,default=None,allow_null=True)
+    # club_name = serializers.CharField(required=False,default=None,allow_null=True)
     
 class BookingSerializer(serializers.ModelSerializer):
-    resource_head_email = serializers.SerializerMethodField()
+    # resource_head_email = serializers.SerializerMethodField()
     class Meta:
         model = Booking
         fields = '__all__'
