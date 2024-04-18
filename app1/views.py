@@ -374,75 +374,142 @@ class ResourceDetail(APIView):
         user = request.user
         data = request.data.copy()
         data['user'] = user.id
+        # data.res
         data['resource'] = resource
 
         resource = Resource.objects.get(pk=resource)
         resource_instance = resource.userperms
         data['userperms'] = resource_instance
 
-        # print("hiii")
-        print(data['start_time'])
-        print(data['end_time'])
-
         serializer = BookingSerializer(data=data)
         
         if serializer.is_valid():
             if user.is_authenticated:
-                
-                booking = serializer.save()  
-                
-                curr_start_time=data['start_time']
-                curr_end_time=data['end_time']
-                resource_head=resource.resource_head
-                print(resource_head) 
-                             
+                  
+                bookings=Booking.objects.filter(resource=resource,date=serializer.validated_data['start_time'].date())   #doubt
+                conflict_present=False
+                for bookingg in bookings:
+                    if bookingg.all_true==True:
+                        if serializer.validated_data['start_time']>=bookingg.start_time and serializer.validated_data['start_time']<=bookingg.end_time: 
+                            print("already booked")
+                            conflict_present=True
+                            break
+                          
 
-                return Response({
-                    'status': status.HTTP_200_OK,
-                    'message': 'Permission Created',
-                    'booking_id': booking.booking_id
-                })
+                        elif serializer.validated_data['end_time']>=bookingg.start_time and serializer.validated_data['end_time']<=bookingg.end_time: 
+                            print("already booked")
+                            conflict_present=True
+                            break
+                           
+                        elif serializer.validated_data['start_time']<=bookingg.start_time and serializer.validated_data['end_time']>=bookingg.end_time:
+                            print("already booked")
+                            conflict_present=True
+                            break
+               
+                if not conflict_present:
+                    # curr_start_time=data['start_time']
+                    # curr_end_time=data['end_time']
+            
+                    serializer.save()
+                            
+
+                    return Response({
+                        'status': status.HTTP_200_OK,
+                        'message': 'Permission Created',
+                        # 'booking_id': bookingg.booking_id
+                    })
+                else:
+                    
+                    return Response({
+                        'status': status.HTTP_400_BAD_REQUEST,
+                        'message': 'Conflicting Requests',
+                        # 'booking_id': bookingg.booking_id
+                    })
+
             else:
                 return Response({
                     'status': status.HTTP_400_BAD_REQUEST,
-                    'message': 'Permission denied'
+                    'message': 'User Not Authencticated',
+                    
                 })
+
+        
         else:
             return Response({
                 'status': status.HTTP_400_BAD_REQUEST,
                  'message': 'Something went wrong',
                 'errors': serializer.errors
             })
+        user = request.user
+        data = request.data.copy()
+        data['user'] = user.id
+        # data.res
+        data['resource'] = resource
+
+        resource = Resource.objects.get(pk=resource)
+        resource_instance = resource.userperms
+        data['userperms'] = resource_instance
+        data['date']=data['start_time'].date()
+
+        serializer = BookingSerializer(data=data)
         
-class AcceptRequest(APIView):
-    def get(self,request,booking_id,*args,**kwargs):
+        if serializer.is_valid():
+            if user.is_authenticated:
+                # booking = serializer.save()/  
+                bookings=Booking.objects.filter(resource=resource,date=data['date'])   #doubt
+                conflict_present=False
+                for bookingg in bookings:
+                    if bookingg.all_true==True:
+                        if data['start_time']>=bookingg.start_time and data['start_time']<=bookingg.end_time: 
+                            print("already booked")
+                            conflict_present=True
+                            break
+                          
 
-        booking_instance = Booking.objects.get(pk=booking_id)
-        heirarchy_list=booking_instance.resource.userperms
-        # print(heirarchy_list[curr_ind])
-        
-        if request.user.is_authenticated and booking_instance.all_true==False and request.user.email==heirarchy_list[booking_instance.curr_index]:
-            # user_instance=User.objects.get(pk=request.user.id)
-            
-            try:
-                booking_instance = Booking.objects.get(pk=booking_id)
-                
+                        elif data['end_time']>=bookingg.start_time and data['end_time']<=bookingg.end_time: 
+                            print("already booked")
+                            conflict_present=True
+                            break
+                           
+                        elif data['start_time']<=bookingg.start_time and data['end_time']>=bookingg.end_time:
+                            print("already booked")
+                            conflict_present=True
+                            break
+               
+                if conflict_present:
+                    curr_start_time=data['start_time']
+                    curr_end_time=data['end_time']
+                    resource_head=resource.resource_head
 
-                booking_instance.curr_index +=1
+                    print(resource_head) 
+                            
 
-                if(booking_instance.curr_index==booking_instance.max_index):
-                    date=booking_instance.date
-                    email=booking_instance.user.email
-                    resource=booking_instance.resource.resource_name
-                    booking_instance.all_true=True
-                    # RequestAcceptedMail(email,resource,date)
+                    return Response({
+                        'status': status.HTTP_200_OK,
+                        'message': 'Permission Created',
+                        'booking_id': bookingg.booking_id
+                    })
+                else:
+                    return Response({
+                        'status': status.HTTP_200_OK,
+                        'message': 'Conflicting Requests',
+                        # 'booking_id': bookingg.booking_id
+                    })
+
+            else:
+                return Response({
+                    'status': status.HTTP_200_OK,
+                    'message': 'User Not Authencticated',
                     
-                booking_instance.save()
+                })
 
-                return Response({"message": "Accepted by current user"}, status=200)
-
-            except Booking.DoesNotExist:
-                return Response({"message": "Booking does not exist."}, status=404)
+        
+        else:
+            return Response({
+                'status': status.HTTP_400_BAD_REQUEST,
+                 'message': 'Something went wrong',
+                'errors': serializer.errors
+            })
            
             # # to upate partially we pass instance as a paramter
             # serializer=acceptrequestSerializer(booking_instance,data=request.data)
@@ -478,9 +545,59 @@ class AcceptRequest(APIView):
                
             # return  Response(serializer.errors, status=400)
         
+        # else:
+        #     return Response({"message": "User is not authenticated or does not have the required role."}, status=403)
+class AcceptRequest(APIView):
+    def get(self,request,booking_id,*args,**kwargs):
+
+        booking_instance = Booking.objects.get(pk=booking_id)
+        heirarchy_list=booking_instance.resource.userperms
+        r_name=booking_instance.resource.resource_name
+        # print(heirarchy_list[curr_ind])
+        
+        if request.user.is_authenticated and booking_instance.all_true==False and request.user.email==heirarchy_list[booking_instance.curr_index]:
+            # user_instance=User.objects.get(pk=request.user.id)
+            
+            try:
+                booking_instance = Booking.objects.get(pk=booking_id)
+                
+
+                booking_instance.curr_index +=1
+
+                if(booking_instance.curr_index==booking_instance.max_index):
+                    date=booking_instance.date
+                    email=booking_instance.user.email
+                    resource=booking_instance.resource.resource_name
+                    booking_instance.all_true=True
+                    RequestAcceptedMail(email,resource,date)
+
+                    bookings=Booking.objects.filter(resource=r_name,date=booking_instance.date)#doubt
+
+                    for booking in bookings:
+                        if booking.start_time>=booking_instance.start_time and booking.start_time<=booking_instance.end_time: 
+                            RequestDeniededMail(booking.user.email,resource,booking.date)
+                            booking.delete()
+
+                        elif booking.end_time>=booking_instance.start_time and booking.end_time<=booking_instance.end_time:
+                            RequestDeniededMail(booking.user.email,resource,booking.date)
+                            booking.delete()
+
+                        elif booking_instance.start_time>=booking.start_time and booking_instance.end_time<=booking.end_time:
+                            RequestDeniededMail(booking.user.email,resource,booking.date)
+                            booking.delete()
+                        
+
+                    
+                booking_instance.save()
+
+                return Response({"message": "Accepted by current user"}, status=200)
+
+            except Booking.DoesNotExist:
+                return Response({"message": "Booking does not exist."}, status=404)
+          
         else:
             return Response({"message": "User is not authenticated or does not have the required role."}, status=403)
-
+        
 class DenyRequest(APIView):
 
     def get(self,request,booking_id, *args,**kwargs):
@@ -541,6 +658,9 @@ class DenyRequest(APIView):
 #                     'status': status.HTTP_400_BAD_REQUEST,
 #                     'message': 'Permission denied'
 #                 })
+
+
+
 
 class PendingRequests(APIView):
     def get(self,request, *args,**kwargs):
@@ -653,6 +773,7 @@ class UserInfo(APIView):
                         'email':request.user.email,
                         'organization': request.user.organization,
                         'Role':request.user.numericRoleLevel,
+                        'is_admin':request.user.is_admin,
                         
                     }
             return JsonResponse({
