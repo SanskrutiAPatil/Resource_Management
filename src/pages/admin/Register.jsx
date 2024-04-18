@@ -6,10 +6,11 @@ import FormControl from "@mui/material/FormControl";
 import {Navigate} from 'react-router-dom';
 import Select from "@mui/material/Select";
 import axios from "axios";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { UserContext } from "../../context/userContext";
 import { getCookie } from "../../utilities/getCSRF";
 import Spinner from "../../components/Spinner";
+import Navbar from "../../components/Navbar";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -17,12 +18,16 @@ const Register = () => {
   const [position, setPosition] = useState("");
   const [redirect, setRedirect] = useState(false);
   const {user, isUserInfoReady} = useContext(UserContext);
-  console.log(user);
+  const [isAdmin, setIsAdmin] = useState(null);
+
+  useEffect(() => {
+    if(isUserInfoReady && user && user["userDetails"] && user["userDetails"].is_admin){
+      setIsAdmin(true);
+    }
+  }, [isAdmin, isUserInfoReady, user]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    console.log(document.cookie);
 
     const csrfToken = getCookie("csrftoken");
 
@@ -47,9 +52,13 @@ const Register = () => {
     setPosition("");
   };
 
-  if(!isUserInfoReady){
+  if(isAdmin === null || !isUserInfoReady){
     return <Spinner />;
   }
+  if(!isAdmin){
+    return <Navigate to="/" />
+  }
+
 
   if(isUserInfoReady && !user){
     setRedirect(true);
@@ -63,11 +72,12 @@ const Register = () => {
 
   return (
     <>
+    <Navbar/>
       <form
         className="flex justify-center justify-items-center"
         onSubmit={(event) => handleSubmit(event)}
       >
-        <div className="w-[80%] sm:w-[60%] md:w-[40%] rounded-lg subpixel-antialiased flex justify-items-center gap-3 flex-col justify-center  shadow-sm bg-gray-100 py-12 my-32 md:px-16 sm:px-2 md:mx-32 sm:mx-6 mx-2 ">
+        <div className="w-[80%] sm:w-[60%] md:w-[50%] min-w-[400px] rounded-lg subpixel-antialiased flex justify-items-center gap-3 flex-col justify-center  shadow-sm bg-gray-100 py-12 my-32 md:px-16 sm:px-2 md:mx-32 sm:mx-6 mx-2 ">
           <h2 className="text-center font-normal md:text-4xl text-3xl mb-8">
             Registration Form
           </h2>
@@ -107,9 +117,8 @@ const Register = () => {
           <div className="flex justify-center">
             <TextField
               style={{ width: "80%", marginBottom: "20px" }}
-              required
               id="name"
-              label="name"
+              label="Name"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />

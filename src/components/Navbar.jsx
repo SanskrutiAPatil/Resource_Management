@@ -4,29 +4,39 @@ import Button from "./Button"
 import { getCookie } from "../utilities/getCSRF"
 import { useContext, useEffect, useState} from "react"
 import { UserContext } from "../context/userContext";
+import Spinner from "./Spinner";
 
 const Navbar = () => {
   const title = "Resource Management Portal"
   const [login, setLogin] = useState(null);
   const [reqLinkStatus, setReqLinkStatus] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const {user, isUserInfoReady} = useContext(UserContext)
 
+  
   useEffect(() => {
     if(getCookie("csrftoken") !== ""){
       setLogin(true);
     } else {
       setLogin(false);
     }
-
-    if(isUserInfoReady &&  user["userDetails"] && user["userDetails"].Role === 0){
+    
+    if(isUserInfoReady && user && user["userDetails"] && user["userDetails"].Role === 0){
       setReqLinkStatus(true);
     }
+    
+    if(isUserInfoReady && user && user["userDetails"] && user["userDetails"].is_admin){
+      setIsAdmin(true);
+    }
+    
     console.log(user);
-    console.log(isUserInfoReady &&  user["userDetails"] && user["userDetails"].Role === 0);
     
   }, [login, isUserInfoReady, user]);
   
-
+  if (!isUserInfoReady) {
+    return <Spinner />;
+  }
+  
 
   return (
     <>
@@ -49,6 +59,8 @@ const Navbar = () => {
                 {/* <p className="text-xl text-white">Add User</p>
                 <p className="text-xl text-white">View Users</p> */}
                 <Button to="/" className="hover:shadow-lg hover:text-primary hover:bg-white" name="Home"/>
+                <Button to="/admin/add" className={"hover:shadow-lg hover:text-primary hover:bg-white" + (isAdmin ? "" : " hidden ")} name="Add"/>
+                <Button to="/admin/view" className={"hover:shadow-lg hover:text-primary hover:bg-white" + (isAdmin ? "" : " hidden ")} name="View"/>
                 <Button to={login ? "/requests" : "/login"} className={"hover:shadow-lg hover:text-primary hover:bg-white " + (reqLinkStatus && " hidden ")} name="Requests" />
                 <Button to={login ? "/profile" : "/login"} className={"hover:shadow-lg hover:text-primary hover:bg-white "} name="Profile" />
                 <Button to="/login" name="Login"  className={"hover:shadow-lg hover:bg-white hover:text-primary hover:underline hover:outline-none " + (!login ? "" : "hidden ")}/>
@@ -56,9 +68,7 @@ const Navbar = () => {
             
         </nav>
     </header>
-    <div className="-mx-[10px] md:hidden block">
-    <h1 className="text-3xl  underline text-center mt-8 font-semibold ">{title}</h1>
-  </div>
+
     </>
   )
 }

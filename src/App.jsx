@@ -25,7 +25,7 @@ const App = () => {
       autoHideDuration={1500}  
       anchorOrigin={{
         vertical: 'top',
-        horizontal: 'right',
+        horizontal: 'left',
       }}>
         <Routes>
           <Route path="/" element={<Layout/>}>

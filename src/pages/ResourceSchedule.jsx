@@ -269,7 +269,7 @@ const ResourceSchedule = () => {
         {getWeek(currDate).map((day) => (
           <div
             key={`${day.format("YYYY-MM-DD HH:mm:ss")}`}
-            className="border-l border-gray-600"
+            className="border-l border-gray-600 "
           >
             <CalDaySchedule 
             key={`${day.format("YYYY-MM-DD HH:mm:ss")}`} 

@@ -65,7 +65,7 @@ console.log(bookedSlots);
             {/* above block handle 1 row of header of column */}
 
 
-            {times && i % 2 === 0 && times[i]}
+            {times && i % 2 === 0 && <h3 className='-mt-2'>{times[i]}</h3>}
             {/* this is used for handle 0th index row  */}
 
             {/* {!times && i === 14 && <div className="absolute h-[120px] w-[90%] rounded-xl left-1 opacity-70 bg-blue-400 z-10 top-0" ></div>} */}
@@ -90,7 +90,7 @@ console.log(bookedSlots);
                     (slot.endTime === i && " h-[98%] mb-[2px] rounded-b-md ")
                   }
                 >
-                  {slot.startTime == i && <div className='text-sm text-center'>- {slot.bookedBy}</div>}
+                  {slot.startTime == i && <div className='text-sm text-center truncate text-gray-800'>~ {slot.bookedBy}</div>}
                   
                 </div>
               )            :       null

@@ -10,9 +10,6 @@
     @apply w-screen flex flex-wrap justify-center content-center h-full;
 }
 
-.form_mainCard{
-    @apply flex w-[50%] h-[60%] flex-wrap justify-center content-center flex-col rounded-lg bg-gray-100 m-2 p-2;
-}
 
 .calender_cell{
     @apply border-b even:border-dotted relative last:border-b-0 text-center text-xl font-medium pt-[6px] text-black first:bg-gray-100 border-gray-600 ;
@@ -20,4 +17,12 @@
 
 .booked_slot{
     @apply w-[90%] absolute left-1 -top-[1px] bg-red-300  z-10  border-l-8 border-l-red-500
+}
+
+.thElement{
+    @apply border-2 border-black text-4xl py-2 px-4 text-center
+}
+
+.tdElement{
+    @apply border-2 border-black text-2xl py-2
 }

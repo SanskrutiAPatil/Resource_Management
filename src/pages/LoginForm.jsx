@@ -20,8 +20,11 @@ const Login = () => {
                 email, password
             })
             console.log(data);
-            data.status === 200 ? enqueueSnackbar("Login Successful", {variant: 'success'}) : enqueueSnackbar("Login Failed", {variant: 'error'})
-            setRedirect(true);
+            if(data.status === 200){
+                enqueueSnackbar("Login Successful", {variant: 'success'}) 
+                setRedirect(true);
+            }else 
+                enqueueSnackbar(`Login Failed ${data.message}`, {variant: 'error'}, {autoHideDuration: 2000})
         } catch (error) {
             console.error(error);
         }
@@ -38,7 +41,7 @@ const Login = () => {
         <form className='flex justify-center justify-items-center' > 
 
 
-            <div className=' rounded-lg subpixel-antialiased flex flex-col justify-center justify-items-center shadow-lg bg-gray-50 py-12 my-32 md:px-16 sm:px-2 md:mx-32 sm:mx-6 mx-2 md:w-1/2 border sm:w-5/6 w-5/6'>
+            <div className=' rounded-lg subpixel-antialiased flex flex-col justify-center justify-items-center shadow-lg bg-gray-50 py-12 my-32 max-w-[500px]  md:w-[70%] border sm:w-5/6 w-5/6'>
 
                 <div className='text-center font-normal md:text-4xl text-3xl mb-16'>Login
                 </div>

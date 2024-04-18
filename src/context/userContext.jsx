@@ -11,10 +11,9 @@ export const UserContextProvider = ({ children }) => {
   const [isUserInfoReady, setIsUserInfoReady]  = useState(false);
 
   useEffect(() => {
-
     setCSRF(getCookie("csrftoken"));
 
-    if (!user) {
+    if (!user || user.status === 400) {
       axios
         .get(
           "/UserInfo",
@@ -25,7 +24,9 @@ export const UserContextProvider = ({ children }) => {
         }
         )
         .then(({ data }) => {
-          setUser(data);
+          if(data.status === 200){
+            setUser(data);
+          }  
           setIsUserInfoReady(true);
           data;
         })

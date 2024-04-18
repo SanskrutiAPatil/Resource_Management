@@ -2,7 +2,7 @@
 
 import FormInput from '../components/formComponents/formInput';
 import { PiArrowRightThin } from "react-icons/pi";
-import { IoIosCloseCircle } from "react-icons/io";
+import { IoCloseOutline } from "react-icons/io5";
 import { MdOutlineLibraryBooks } from "react-icons/md";
 import { HiOutlinePencil } from "react-icons/hi";
 import { LuClock3 } from "react-icons/lu";
@@ -20,11 +20,9 @@ import { getCookie } from '../utilities/getCSRF';
 import utc from 'dayjs/plugin/utc';
 import dayjs from 'dayjs';
 import { enqueueSnackbar } from 'notistack';
+import { eightAM, eightPM, isValidBooking } from '../utilities/valid';
 
 dayjs.extend(utc);
-
-const eightAM = dayjs().set('hour', 8).startOf('hour');
-const eightPM = dayjs().set('hour', 20).startOf('hour');
 
 
 
@@ -41,42 +39,53 @@ export default function BookSlot({ handleClose, currDateTime, resource }) {
     const getDateTimeReqFmt = (givenObject) => {
         return `${(dayjs(givenObject).utc().add(5, 'hours').add(30, 'minutes')).format('YYYY-MM-DDT HH:mm:ss')}`.replace(' ', '');
     }
+
+
     
 
     const handleBooking = async (event) => {
         try {
             event.preventDefault();
-
-            console.log(startTime, endTime);
-            
+                        
             const start_time = getDateTimeReqFmt(startTime);
             const end_time = getDateTimeReqFmt(endTime);
-            
-            console.log(start_time, end_time);
+    
             const csrfToken = getCookie("csrftoken");
-            console.log(description);
 
-            if(title === '') alert("Missing Title Field");
-            else{
-                console.log(startTime, endTime)
-                const response = await axios.post(
-                    `/resourcedetail/${resource}`,
-                    {
-                        start_time, 
-                        end_time
-                    },
-                    {
-                        headers: {
-                        "X-CSRFToken": csrfToken, 
+
+            if(title === '' || description === ""){ 
+                enqueueSnackbar('Title & Description are required', {
+                    variant: 'warning', 
+                    anchorOrigin: {
+                    vertical: 'top',
+                    horizontal: 'center'}
+                });
+            }else{
+                if(isValidBooking(startTime, endTime)){
+                    const response = await axios.post(
+                        `/resourcedetail/${resource}`,
+                        {
+                            start_time, 
+                            end_time
                         },
-                    }
-                    );
-                    console.log(response);
-                    response.status === 200 
-                        ? enqueueSnackbar("Request Sent Successfully", {variant: 'success'}) 
-                        : enqueueSnackbar("Request Failed: " + response.message, {variant: 'error'});
-                    handleClose();
+                        {
+                            headers: {
+                            "X-CSRFToken": csrfToken, 
+                            },
+                        }
+                        );
+                        if(response.data.status === 200){
+                            enqueueSnackbar(response.data.message, {variant: 'success'}) 
+                            handleClose();
+                        } else
+                            enqueueSnackbar(response.data.message, {variant: 'error'});
+                }else{
+                    console.log('Invalid Booking');
+                }
             }
+            
+                
+            
 
         } catch (error) {   
             console.error(error);
@@ -110,18 +119,18 @@ export default function BookSlot({ handleClose, currDateTime, resource }) {
         });
     return (
         <>
-            <div className='form_outerSection'>
+            <div className='form_outerSection '>
 
-                <div className='form_mainCard w-4/5 relative'>
+                <div className='flex p-8 flex-wrap justify-center content-center flex-col rounded-lg bg-gray-100 m-2  w-[80%] sm:w-[70%] max-w-[800px] md:w-[80%] relative '>
                     <div className='flex justify-end cursor-pointer absolute -top-5 -right-5'>
-                        <div className=' text-5xl rounded-full bg-gray-100 text-red-500' onClick={handleClose}><IoIosCloseCircle /></div>
+                        <div className=' text-4xl rounded-full w-fit bg-red-500 p-1 text-gray-100' onClick={handleClose}><IoCloseOutline /></div>
                     </div>
 
-                    <div className="text-center underline underline-offset-4 py-4 subpixel-antialiased md:text-2xl xs:text-1xl lg:text-4xl lg:mb-4 xs:mb-2 xs:mx-2"  >
+                    <div className="text-center mb-4 hidden sm:block  underline-offset-4 py-4 subpixel-antialiased text-3xl "  >
                         Booking Card
                     </div>
 
-                    <form className='flex  gap-6 flex-wrap justify-between content-center  flex-col '>
+                    <form className='flex  gap-6 justify-between content-center  flex-col '>
 
                         
                         <FormInput 
@@ -133,6 +142,7 @@ export default function BookSlot({ handleClose, currDateTime, resource }) {
 
                         <FormInput 
                         labelPara="Description" 
+                        required={true}
                         rows={3} 
                         icon={<MdOutlineLibraryBooks/>} 
                         setDescription={setDescription}
@@ -140,9 +150,9 @@ export default function BookSlot({ handleClose, currDateTime, resource }) {
 
 
 
-                        <div className='form_inputField justify-center w-full'>
-                            <div className='grid grid-cols-2 gap-2 w-full'>
-                                <div className=' flex gap-4 w-full'>
+                        <div className=' justify-center w-full'>
+                            <div className='grid grid-cols-1 md:grid-cols-2 gap-2 w-full '>
+                                <div className=' flex gap-4 w-full mb-4'>
 
                                     <LuClock3 className='text-3xl my-auto mx-auto' />
                                     
@@ -151,26 +161,29 @@ export default function BookSlot({ handleClose, currDateTime, resource }) {
                                             <DateTimePicker
                                             minTime={eightAM}
                                             maxTime={eightPM}
-                                            minDate={dayjs().startOf('day')} 
+                                            minDate={dayjs().startOf('day')}
                                             onChange={val => handleTime(val)} 
                                             label="Start Date Time" 
                                             value={startTime}
+                                            minutesStep={30}
                                             />
                                         </ThemeProvider>
                                     </LocalizationProvider>
                                 </div>
 
-                                <div className='flex  gap-4 w-full'>    
+                                <div className='flex  gap-4 w-full mb-4'>    
                                     <PiArrowRightThin className='col-span-1 text-3xl my-auto ' />
                                 
                                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                                         <ThemeProvider theme={newTheme}> 
                                             <DateTimePicker
-                                            minTime={eightAM}
+                                            minTime={startTime ? startTime.add(30, 'minutes') : eightAM}
                                             maxTime={eightPM}
+                                            minDate={startTime ? startTime.startOf('day') : dayjs().startOf('day')}
+                                            maxDate={startTime ? startTime.endOf('day') : null}
                                             label="End Date Time" 
                                             value={endTime} 
-                                            minDate={dayjs().startOf('day')}
+                                            minutesStep={30}
                                             onChange={(val) => setEndTime(val)}
                                             />
                                         </ThemeProvider>
