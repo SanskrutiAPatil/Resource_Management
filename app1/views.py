@@ -60,6 +60,57 @@ User = get_user_model()
 #             print(e)
 #             return Response({'key': 'value'}, status=status.HTTP_200_OK)
         
+class VerifyOTPOnly(APIView):
+#verifying otp for pass reset
+    def post(self, request):
+      
+        data=request.data
+        serializer=VerifyOTPOnlySerializer(data=data)
+       
+        if serializer.is_valid():
+            
+            otp=serializer.data['otp']
+            email = serializer.data['mail']
+            # serializer.data['mail']=email
+            user=User.objects.get(email=email)
+            
+            if not user:
+                return Response({
+                'status':400,
+                'message':'something went wrong',
+                'data':'invalid mail',
+
+            })
+
+
+
+            if user.otp!=otp:
+                return Response({
+                'status':400,
+                'message':'something went wrong',
+                'data':'wrong otp',
+
+            })
+
+            # if(user.expires_at < timezone.now()):
+            #     return Response({
+            #     'message':'OTP Validity expired',
+            #     'data':'Resend OTP',
+
+            # })
+            
+            return Response({
+            'status':200,
+            'message':'Account verified',
+            'data':{},
+
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        # except Exception as e:
+        #     return Response({'key': 'value'}, status=status.HTTP_200_OK)
+        
 class VerifyOTP(APIView):
 #verifying otp for pass reset
     def post(self, request, email):
@@ -76,7 +127,7 @@ class VerifyOTP(APIView):
             
             if not user:
                 return Response({
-                'status':status.HTTP_400_BAD_REQUEST,
+                'status':400,
                 'message':'something went wrong',
                 'data':'invalid mail',
 
@@ -86,27 +137,29 @@ class VerifyOTP(APIView):
 
             if user.otp!=otp:
                 return Response({
-                'status':status.HTTP_400_BAD_REQUEST,
+                'status':400,
                 'message':'something went wrong',
                 'data':'wrong otp',
 
             })
 
-            if(user.expires_at < timezone.now()):
-                return Response({
-                'message':'OTP Validity expired',
-                'data':'Resend OTP',
+            # if(user.expires_at < timezone.now()):
+            #     return Response({
+            #     'message':'OTP Validity expired',
+            #     'data':'Resend OTP',
 
-            })
+            # })
 
 
 
 
             # user=user.first()
             user.set_password(new_p)
-            user.password=new_p
+            user.password=django_pbkdf2_sha256.hash(new_p)
             user.is_verified=True
             user.save()
+
+            print(user.password)
             
             return Response({
             'status':200,
@@ -148,29 +201,18 @@ class VerifyEmail(APIView):
 
             #user with that mail does not exist
             return Response({
-                    'status':status.HTTP_400_BAD_REQUEST,
+                    'status':400,
                     'message':'something went wrong',
                     'data':'Account with this mail does not exist',
 
                 })
             
         return Response({
-                    'status':status.HTTP_400_BAD_REQUEST,
+                    'status':400,
                     'message':'something went wrong',
                     'data':serializer.errors,
 
                 })
-
-
-class resendOTP(APIView):
-    def get(self, request,email, *args, **kwargs):
-        send_otp_via_email(email)
-        return Response({
-                    'status':200,
-                    'message':'otp sent',
-                    # 'data':serializer.data,
-                })
-
 
     
 class SignIn(APIView):
