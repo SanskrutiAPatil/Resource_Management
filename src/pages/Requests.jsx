@@ -20,7 +20,7 @@ const Requests = () => {
     .get('/pendingrequest/')
     .then((res) => {
         const {data} = res;
-        setRequests(data.data);
+        setRequests(data.data.reverse());
         setLogin(getCookie("csrftoken"));
         console.log(data.data);
         console.log("fetched requests....");

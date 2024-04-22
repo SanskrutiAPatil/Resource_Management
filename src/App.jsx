@@ -10,14 +10,27 @@ import LoginForm from './pages/LoginForm'
 import Register from './pages/admin/Register'
 import BookSlot from "./pages/BookSlot"
 import ViewUser from "./pages/admin/ViewUser"
-import { UserContextProvider } from "./context/userContext"
+import { UserContext, UserContextProvider } from "./context/userContext"
 import {SnackbarProvider} from 'notistack';
+import { useContext, useEffect, useState } from "react"
 
 axios.defaults.baseURL = 'http://localhost:8000';
 axios.defaults.withCredentials = true;
 
 
 const App = () => {
+
+  const {isUserInfoReady, user} = useContext(UserContext);
+  const [login, setLogin] = useState(null);
+
+  useEffect(() => {
+    if(user && user.status === 200){
+      setLogin(true);
+    } else {
+      setLogin(false);
+    }
+  }, [login, isUserInfoReady, user]);
+
   return (
     <UserContextProvider>
       <SnackbarProvider 

@@ -64,11 +64,12 @@ const ResourceSchedule = () => {
 
 
   useEffect(() => {
+
     
       const csrftoken = getCookie('csrftoken');
       axios
         .put(
-          `/resourcedetail/${resName}`,
+          `/resourcedetail/${resName.replace(/ /g, '')}`,
           {
             "date": currDate.format("YYYY-MM-DD"),
           },
@@ -79,7 +80,6 @@ const ResourceSchedule = () => {
           }
         )
         .then((response) => {
-          console.log(response.data.bookings);
           setBooking(response.data.bookings);
         })
         .catch((error) => {

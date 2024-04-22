@@ -12,7 +12,7 @@ export const UserContextProvider = ({ children }) => {
 
   useEffect(() => {
     setCSRF(getCookie("csrftoken"));
-
+    console.log(user && user.userDetails);
     if (!user || user.status === 400) {
       axios
         .get(

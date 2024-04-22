@@ -20,7 +20,7 @@ const Navbar = () => {
     } else {
       setLogin(false);
     }
-    
+
     if(isUserInfoReady && user && user["userDetails"] && user["userDetails"].Role === 0){
       setReqLinkStatus(true);
     }
@@ -63,7 +63,7 @@ const Navbar = () => {
                 <Button to="/admin/view" className={"hover:shadow-lg hover:text-primary hover:bg-white" + (isAdmin ? "" : " hidden ")} name="View"/>
                 <Button to={login ? "/requests" : "/login"} className={"hover:shadow-lg hover:text-primary hover:bg-white " + (reqLinkStatus && " hidden ")} name="Requests" />
                 <Button to={login ? "/profile" : "/login"} className={"hover:shadow-lg hover:text-primary hover:bg-white "} name="Profile" />
-                <Button to="/login" name="Login"  className={"hover:shadow-lg hover:bg-white hover:text-primary hover:underline hover:outline-none " + (!login ? "" : "hidden ")}/>
+                <Button to={login ? "/" : "/login"} name="Login"  className={"hover:shadow-lg hover:bg-white hover:text-primary hover:underline hover:outline-none " + (!login ? "" : "hidden ")}/>
             </div>
             
         </nav>

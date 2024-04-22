@@ -51,12 +51,35 @@ const Profile = () => {
   //  this code is copied from meterial ui for modal for edit
 
   const [openChangePass, setOpenChangePass] = React.useState(false);
-  const handleOpenChangePass = () => setOpenChangePass(true);
+  const handleOpenChangePass = () => {
+    setOpenChangePass(true);
+    axios
+      .post(
+        "/verifyemail/",
+        { mail: user.userDetails.email },
+        {
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+        }
+      )
+      .then((res) => {
+        if (res.data.status === 200) {
+          enqueueSnackbar(res.data.message, { variant: "success" });
+        } else {
+          enqueueSnackbar(res.data.message, { variant: "error" });
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
   const handleCloseChangePass = () => setOpenChangePass(false);
   //  this code is copied from meterial ui for modal for change password
   const [requests, setRequests] = useState(null);
   const { user, isUserInfoReady } = useContext(UserContext);
   const [login, setLogin] = useState(getCookie("csrftoken"));
+  const [requestUpdate, setRequestUpdate] = useState(false);
 
   useEffect(() => {
     axios
@@ -66,12 +89,14 @@ const Profile = () => {
         },
       })
       .then(({ data }) => {
-        setRequests(data.data);
+        const requestData = data.data;
+        setRequests(requestData.reverse());
+        console.log(requestData);
       })
       .catch((error) => {
         console.log(error);
       });
-  }, [login]);
+  }, [login, requestUpdate]);
 
   const logout = () => {
     axios
@@ -188,6 +213,7 @@ const Profile = () => {
               steps={steps}
               request={request}
               key={request.booking_id + "req"}
+              setRequestUpdate={setRequestUpdate}
             />
           ))}
       </div>
