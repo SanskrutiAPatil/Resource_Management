@@ -3,8 +3,10 @@ from rest_framework.views import APIView
 from .serializers import *
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 from .models import *
 from .emails import *
+from datetime import datetime, timedelta
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
@@ -16,6 +18,8 @@ from django.http import JsonResponse
 from django.db.models import Q
 from datetime import timedelta
 import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from django.contrib.auth import get_user_model
 
@@ -60,6 +64,56 @@ User = get_user_model()
 #             print(e)
 #             return Response({'key': 'value'}, status=status.HTTP_200_OK)
         
+class VerifyOTPOnly(APIView):
+#verifying otp for pass reset
+    def post(self, request):
+      
+        data=request.data
+        serializer=VerifyOTPOnlySerializer(data=data)
+       
+        if serializer.is_valid():
+            
+            otp=serializer.data['otp']
+            email = serializer.data['mail']
+            # serializer.data['mail']=email
+            user=User.objects.get(email=email)
+            
+            if not user:
+                return Response({
+                'status':400,
+                'message':'something went wrong',
+                'data':'invalid mail',
+
+            })
+
+
+
+            if user.otp!=otp:
+                return Response({
+                'status':400,
+                'message':'something went wrong',
+                'data':'wrong otp',
+
+            })
+
+            if(user.expires_at < timezone.now()):
+                return Response({
+                    'status': 400,
+                'message':'OTP Validity expired',
+                'data':'Resend OTP',
+
+            })
+            
+            return Response({
+            'status':status.HTTP_200_OK,
+            'message':'Account verified',
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        # except Exception as e:
+        #     return Response({'key': 'value'}, status=status.HTTP_200_OK)
+        
 class VerifyOTP(APIView):
 #verifying otp for pass reset
     def post(self, request, email):
@@ -89,7 +143,6 @@ class VerifyOTP(APIView):
                 'status':status.HTTP_400_BAD_REQUEST,
                 'message':'something went wrong',
                 'data':'wrong otp',
-
             })
 
             if(user.expires_at < timezone.now()):
@@ -100,19 +153,17 @@ class VerifyOTP(APIView):
             })
 
 
-
-
             # user=user.first()
             user.set_password(new_p)
-            user.password=new_p
+            user.password=django_pbkdf2_sha256.hash(new_p)
             user.is_verified=True
             user.save()
+
+            print(user.password)
             
             return Response({
-            'status':200,
+            'status':status.HTTP_200_OK,
             'message':'Account verified',
-            'data':{},
-
             })
 
 
@@ -127,7 +178,7 @@ class VerifyEmail(APIView):
     def get_object(self, queryset=None):
         return self.request.user
 
-    def put(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         serializer = EmailVerificationSerializer(data=request.data)
         print("!23")
@@ -141,7 +192,7 @@ class VerifyEmail(APIView):
 
                 
                 return Response({
-                    'status':200,
+                    'status':status.HTTP_200_OK,
                     'message':'email sent',
                     'data':serializer.data,
                 })
@@ -160,17 +211,6 @@ class VerifyEmail(APIView):
                     'data':serializer.errors,
 
                 })
-
-
-class resendOTP(APIView):
-    def get(self, request,email, *args, **kwargs):
-        send_otp_via_email(email)
-        return Response({
-                    'status':200,
-                    'message':'otp sent',
-                    # 'data':serializer.data,
-                })
-
 
     
 class SignIn(APIView):
@@ -198,15 +238,14 @@ class SignIn(APIView):
                     if authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
                         login(request, user)
                         return Response({
-                            'status':200,
+                            'status':status.HTTP_200_OK,
                             'message':'User logged in',
                             'data':serializer.data
                         })
                     else:
                         return Response({
                             'status':status.HTTP_400_BAD_REQUEST,
-                            'message':'Incorrect Mail ID',
-                            'data':'Wrong password',
+                            'message':'Wrong password',
                         })
             except  ObjectDoesNotExist:
                         
@@ -234,7 +273,7 @@ class SignOut(APIView):
             usr = request.user
             logout(request)
             return Response({
-                'status':200,
+                'status':status.HTTP_200_OK,
                 'message':'User logged out',
                 'data':usr.email,
             })
@@ -259,14 +298,14 @@ class AdminMonitor(APIView):
             if user.is_admin == True:
                 if not User.objects.filter(email=serializer.validated_data['mail']).exists():
                     return Response({
-                    'status':200,
+                    'status':status.HTTP_200_OK,
                     'message':'User not found',
                 })
                 usr=User.objects.get(email=serializer.validated_data['mail'])
                 e = usr.email
                 usr.delete()
                 return Response({
-                    'status':200,
+                    'status':status.HTTP_200_OK,
                     'message':'User deleted',
                     'user':e,
                 })
@@ -292,7 +331,7 @@ class AdminMonitor(APIView):
                 e = usr.email
                 send_random_password(serializer.validated_data['mail'], temp_pass)
                 return Response({
-                    'status':200,
+                    'status':status.HTTP_200_OK,
                     'message':'User created. Mail Sent',
                     'user':e,
                 })
@@ -349,7 +388,7 @@ class ResourceDetail(APIView):
                 
            
                 return JsonResponse({
-                    'status': 200,
+                    'status': status.HTTP_200_OK,
                     'message': 'Showing details',
                     # 'booking_allowed': e,
                     'bookings': serialized_bookings
@@ -585,12 +624,12 @@ class AcceptRequest(APIView):
                         elif booking_instance.start_time>=booking.start_time and booking_instance.end_time<=booking.end_time:
                             RequestDeniededMail(booking.user.email,resource,booking.date)
                             booking.delete()
-                        
+
 
                     
                 booking_instance.save()
 
-                return Response({"message": "Accepted by current user"}, status=200)
+                return Response({"message": "Accepted by current user"}, status=status.HTTP_200_OK)
 
             except Booking.DoesNotExist:
                 return Response({"message": "Booking does not exist."}, status=404)
@@ -619,8 +658,8 @@ class DenyRequest(APIView):
                     booking_instance.delete()
                     return Response({"message": "Request denied successfully"}, status=status.HTTP_200_OK)
                 
-                elif request.user==booking.user:
-                   
+                elif request.user==booking_instance.user:
+                    
                     booking_instance.delete()
                     return Response({"message": "Request Deleted successfully"}, status=status.HTTP_200_OK)    
                 

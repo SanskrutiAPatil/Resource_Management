@@ -26,7 +26,7 @@ def send_otp_via_email(email):
     user_obj=get_user_model().objects.get(email=email)
     # user_obj.expire
 
-    user_obj.expires_at=timezone.now()+timedelta(minutes=1)
+    user_obj.expires_at=timezone.now()+timedelta(minutes=2)
     user_obj.otp=otp
     user_obj.save()
 

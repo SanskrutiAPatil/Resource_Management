@@ -9,9 +9,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields=['email','is_verified'] 
 
 class VerifyOTPSerializer(serializers.Serializer):
-    mail=serializers.EmailField()
     otp=serializers.CharField()
     new_password = serializers.CharField(required = True)
+
+class VerifyOTPOnlySerializer(serializers.Serializer):
+    mail=serializers.EmailField()
+    otp=serializers.CharField()
 
 
 class PasswordSerializer(serializers.Serializer):

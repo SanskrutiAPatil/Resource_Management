@@ -37,9 +37,14 @@ class User(AbstractUser):
 class Resource(models.Model):
     CHOICES = [
         ('Auditorium', 'Auditorium'),
-        ('sem', 'Seminar hall'), 
-        ('labs','labs'),
-        ('classroom','classroom')
+        ('ENTCSeminarHall', 'ENTCSeminarHall'), 
+        ('COMPSeminarHall','COMPSeminarHall'),
+        ('ITSeminarHall','ITSeminarHall'),
+        ('DigitalBoard','DigitalBoard'),
+        ('LawnCourt','LawnCourt'),
+        ('Mic','Mic'),
+        ('Camera','Camera'),
+        ('Podium','Podium'),
     ]
     resource_name = models.CharField(max_length=20, primary_key=True, choices=CHOICES)
     resource_type = models.IntegerField(default=0)
