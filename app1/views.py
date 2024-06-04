@@ -185,26 +185,33 @@ class SignIn(APIView):
                     'message':'something went wrong',
                     'data':'An User already logged in',
                 })
+        print("here")
         serializer = PasswordSerializer(data=request.data)
         if serializer.is_valid():
+            print("here12")
             user=User.objects.get(email=serializer.validated_data['email'])
             print(user)
             print(user.password)
             if user and authenticate(request, username=None, email=serializer.validated_data['email'], password=serializer.validated_data['password']):
+                print("here")
                 login(request, user)
                 return Response({
                     'status':200,
                     'message':'User logged in',
                     'data':serializer.data
                 })
+            
+            # print("here")
 
             #user with that mail does not exist
+            #Change the message here. User control 
+            #comes here even if they are not registered
             return Response({
                     'status':400,
                     'message':'something went wrong',
                     'data':'Wrong password',
                 })
-            
+        print("here")   
         return Response({
                     'status':400,
                     'message':'something went wrong',
@@ -482,53 +489,90 @@ class DenyRequest(APIView):
 
         
         
-class ViewRequests(APIView):
-    def get(self,request, *args,**kwargs):
-        print(request.user.numericRoleLevel)
-        if request.user.is_authenticated and request.user.numericRoleLevel>=2:
-            all_bookings = Booking.objects.all()
-            bookings_with_userperms = [booking for booking in all_bookings if request.user.email==booking.resource.userperms[booking.curr_index]]
-            serialized_bookings = []
+# class ViewRequests(APIView):
+#     def get(self,request, *args,**kwargs):
+#         print(request.user.numericRoleLevel)
+#         if request.user.is_authenticated and request.user.numericRoleLevel>=2:
+#             all_bookings = Booking.objects.all()
+#             bookings_with_userperms = [booking for booking in all_bookings if request.user.email==booking.resource.userperms[booking.curr_index]]
+#             serialized_bookings = []
         
-            for booking in bookings_with_userperms:
-                serialized_booking = {
-                    'start_time': booking.start_time,
-                    'end_time': booking.end_time,
-                    'id': booking.booking_id,
-                }
-                serialized_bookings.append(serialized_booking)
+#             for booking in bookings_with_userperms:
+#                 serialized_booking = {
+#                     'start_time': booking.start_time,
+#                     'end_time': booking.end_time,
+#                     'id': booking.booking_id,
+#                 }
+#                 serialized_bookings.append(serialized_booking)
 
-            return JsonResponse({
-                'status': 200,
-                'message': 'Showing details',
-                # 'booking_allowed': e,
-                'bookings': serialized_bookings
-            })
+#             return JsonResponse({
+#                 'status': 200,
+#                 'message': 'Showing details',
+#                 # 'booking_allowed': e,
+#                 'bookings': serialized_bookings
+#             })
         
-        else:
-            return Response({
-                    'status': status.HTTP_400_BAD_REQUEST,
-                    'message': 'Permission denied'
-                })
+#         else:
+#             return Response({
+#                     'status': status.HTTP_400_BAD_REQUEST,
+#                     'message': 'Permission denied'
+#                 })
         
 class PendingRequests(APIView):
     def get(self,request, *args,**kwargs):
-        if request.user.is_autheticated and request.user.numericRoleLevel>=2:
+        if request.user.is_authenticated :
 
             email=request.user.email
             bookings=Booking.objects.all()
             
             requests=[]
             for booking in bookings:
+                print(booking)
                 if email in booking.resource.userperms:
-                    index=requests.index(email)
-                    if booking.curr_ind<=index:
-                        requests.append(booking)
+                    index=booking.resource.userperms.index(email)
+                    if booking.curr_index==index:
+                        booking_inst={
+
+                            'Request by':booking.user.email,
+                            'Resource':booking.resource.resource_name,
+                            'Date':booking.date,
+                            'Start_time':booking.start_time,
+                            'End_time':booking.end_time,
+
+
+                        }
+                        requests.append(booking_inst)
             
             
             return Response({
                 'message':'Pending Requests',
-                'data':list
+                'data':requests
+
+            })
+        else:
+            return Response({
+                'message':'permission Denied',
+            })
+
+class CancelRequests(APIView):
+    def get(self,request, id, *args,**kwargs):
+        bookingid=Booking.object.get(booking_id=id)
+        if request.user.is_authenticated and request.user==bookingid.user.email:
+
+            booking = Booking.objects.get(booking_id==id)
+            booking.delete()
+
+            date=booking.date
+            email=booking.user.email
+            resource=booking.resource.resource_name
+            # RequestCancelledMail(email,resource,date)
+            #THAMB JARA
+            # ok ZALA 
+            
+            
+            return Response({
+                'message':'Request Deleted',
+                # 'data':requests
 
             })
         else:
@@ -537,6 +581,13 @@ class PendingRequests(APIView):
             })
 
 
+class UserProfile(APIView):
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            booking = Booking.objects.get(user = request.user)
+            print(booking)
 
-
-
+            return Response({
+                'message':'User Details'
+                # 'data' : ''
+            })

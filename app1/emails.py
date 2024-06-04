@@ -50,3 +50,9 @@ def RequestDeniededMail(email,resource,date):
     subject='Request Denied'
     email_from = settings.EMAIL_HOST
     send_mail(subject, message, email_from, [email])
+
+def RequestCancelledMail(email,resource,date):
+    message=f'Your request for {resource} on {date} has been cancelled'
+    subject='Request Cancelled'
+    email_from = settings.EMAIL_HOST
+    send_mail(subject, message, email_from, [email])

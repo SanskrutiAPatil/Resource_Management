@@ -19,8 +19,8 @@ from django.urls import path,include
 from app1.views import *
 
 urlpatterns = [
+
     path('admin/', admin.site.urls),
-    # path('register/',RegisterAPI.as_view()),
     path('verifyotp/<email>',VerifyOTP.as_view()),
     path('verifyemail/',VerifyEmail.as_view()),
     path('login/', SignIn.as_view()),
@@ -30,8 +30,11 @@ urlpatterns = [
     path('auth/',include('rest_framework.urls'),name = "rest_framework"),
     path('grant/<int:booking_id>',AcceptRequest.as_view()),
     path('deny/<int:booking_id>',DenyRequest.as_view()),
-    path('viewrequests/',ViewRequests.as_view()),
+    # path('viewrequests/',ViewRequests.as_view()),
     path('resendotp/<email>',resendOTP.as_view()),
+    path('pendingrequest/',PendingRequests.as_view()),
+    path('cancelrequest/<int:booking_id>',CancelRequests.as_view(),name='cancel_request'),
+    path('user/', UserProfile.as_view()),
 
 ]
 
