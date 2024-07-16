@@ -327,9 +327,9 @@ class AdminMonitor(APIView):
         if serializer.is_valid():
             if user.is_admin == True:
                 temp_pass = get_random_string(length=10, allowed_chars="abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789")
+                send_random_password(serializer.validated_data['mail'], temp_pass)
                 usr=User.objects.create(email=serializer.validated_data['mail'], password=django_pbkdf2_sha256.hash(temp_pass), role=serializer.validated_data['role'])
                 e = usr.email
-                send_random_password(serializer.validated_data['mail'], temp_pass)
                 return Response({
                     'status':status.HTTP_200_OK,
                     'message':'User created. Mail Sent',
